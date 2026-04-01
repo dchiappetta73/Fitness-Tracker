@@ -14,6 +14,28 @@ def init_connection() -> Client:
 
 supabase = init_connection()
 
+st.sidebar.markdown("### 🔍 Debug Panel")
+try:
+    # Test read
+    test_read = supabase.table("workouts").select("*").limit(1).execute()
+    st.sidebar.success(f"✅ Read: {len(test_read.data)} rows")
+    
+    # Test what key you're using
+    if "service_role" in st.secrets.get("SUPABASE_KEY", ""):
+        st.sidebar.info("🔑 Using: service_role key")
+    else:
+        st.sidebar.info("🔑 Using: anon/public key")
+        
+except Exception as e:
+    st.sidebar.error(f"❌ DB Error: {e}")
+
+# Load data
+workouts_df = load_workouts()
+nutrition_df = load_nutrition()
+
+# Show row counts
+st.sidebar.metric("Workout Rows", len(workouts_df))
+st.sidebar.metric("Nutrition Rows", len(nutrition_df))
 def load_workouts():
     response = supabase.table("workouts").select("*").order("Date").execute()
     data = response.data if response.data else []
