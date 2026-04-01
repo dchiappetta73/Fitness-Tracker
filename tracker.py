@@ -422,17 +422,17 @@ with tab2:
     with st.form("nutrition_form"):
         n1, n2, n3, n4, n5, n6 = st.columns(6)
         with n1:
-            nutrition_date = st.date_input("Nutrition date", value=current_date, key="nutrition_date")
+            nutrition_date = st.date_input("Nutrition date", value=current_date, key="nutrition_date_key")
         with n2:
-            nutrition_bw = st.number_input("Bodyweight", 100.0, 400.0, float(latest_logged_weight), 0.5)
+            nutrition_bw = st.number_input("Bodyweight", 100.0, 400.0, float(latest_logged_weight), 0.5, key="nutrition_bw_key")
         with n3:
-            calories_in = st.number_input("Calories eaten", 0, 10000, macros["calories"])
+            calories_in = st.number_input("Calories eaten", 0, 10000, macros["calories"], key="calories_key")
         with n4:
-            protein_in = st.number_input("Protein eaten", 0, 500, macros["protein"])
+            protein_in = st.number_input("Protein eaten", 0, 500, macros["protein"], key="protein_key")
         with n5:
-            carbs_in = st.number_input("Carbs eaten", 0, 1000, macros["carbs"])
+            carbs_in = st.number_input("Carbs eaten", 0, 1000, macros["carbs"], key="carbs_key")
         with n6:
-            fat_in = st.number_input("Fat eaten", 0, 300, macros["fat"])
+            fat_in = st.number_input("Fat eaten", 0, 300, macros["fat"], key="fat_key")
 
         submitted_nutrition = st.form_submit_button("Save nutrition")
 
