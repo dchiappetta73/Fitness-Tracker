@@ -320,15 +320,39 @@ nutrition_df = load_nutrition()
 st.title("4-Day Upper/Lower Recomp Tracker")
 
 st.header("Program Setup")
+
+# Load saved settings
+saved_settings = load_user_settings()
+
+# If settings exist in DB, use them; otherwise use defaults
+if saved_settings:
+    default_weight = saved_settings.get("bodyweight", 168.0)
+    default_height = saved_settings.get("height_inches", 70.0)
+    default_age = saved_settings.get("age", 52)
+    default_gender = saved_settings.get("gender", "Male")
+    default_activity = saved_settings.get("activity_level", "Moderately Active")
+    default_training = saved_settings.get("training_experience", "Intermediate")
+    default_goal = saved_settings.get("goal", "Recomp")
+    default_start_date = pd.to_datetime(saved_settings.get("start_date")).date() if saved_settings.get("start_date") else date.today()
+else:
+    default_weight = 168.0
+    default_height = 70.0
+    default_age = 52
+    default_gender = "Male"
+    default_activity = "Moderately Active"
+    default_training = "Intermediate"
+    default_goal = "Recomp"
+    default_start_date = date.today()
+
 c1, c2, c3, c4 = st.columns(4)
 with c1:
-    start_weight = st.number_input("Starting weight (lbs)", 100.0, 400.0, 168.0, 0.5)
+    current_bodyweight = st.number_input("Current weight (lbs)", 100.0, 400.0, default_weight, 0.5)
 with c2:
-    height_inches = st.number_input("Height (inches)", 48.0, 84.0, 70.0, 0.5)
+    height_inches = st.number_input("Height (inches)", 48.0, 84.0, default_height, 0.5)
 with c3:
-    age = st.number_input("Age", 18, 90, 52, 1)
+    age = st.number_input("Age", 18, 90, default_age, 1)
 with c4:
-    gender = st.selectbox("Gender", ["Male", "Female"])
+    gender = st.selectbox("Gender", ["Male", "Female"], index=0 if default_gender == "Male" else 1)
 
 activity_options = {
     "Sedentary — desk job, little formal exercise, low daily movement": "Sedentary",
@@ -344,28 +368,52 @@ training_options = {
     "Advanced — many years of structured lifting, slower gains, needs more precision": "Advanced"
 }
 
+# Find the index for saved settings
+activity_keys = list(activity_options.keys())
+activity_index = next((i for i, k in enumerate(activity_keys) if activity_options[k] == default_activity), 2)
+
+training_keys = list(training_options.keys())
+training_index = next((i for i, k in enumerate(training_keys) if training_options[k] == default_training), 1)
+
 c5, c6, c7, c8 = st.columns(4)
 with c5:
-    start_date = st.date_input("Program start date", value=date.today())
+    start_date = st.date_input("Program start date", value=default_start_date)
 with c6:
     current_date = st.date_input("Current date in program", value=date.today())
 with c7:
-    activity_level_label = st.selectbox("Activity level", list(activity_options.keys()))
+    activity_level_label = st.selectbox("Activity level", activity_keys, index=activity_index)
     activity_level = activity_options[activity_level_label]
 with c8:
-    training_experience_label = st.selectbox("Training level", list(training_options.keys()))
+    training_experience_label = st.selectbox("Training level", training_keys, index=training_index)
     training_experience = training_options[training_experience_label]
 
-goal = st.selectbox("Goal", ["Recomp", "Cut", "Bulk"])
+goal = st.selectbox("Goal", ["Recomp", "Cut", "Bulk"], index=["Recomp", "Cut", "Bulk"].index(default_goal))
+
+# Save settings button
+if st.button("💾 Save Settings", use_container_width=True):
+    settings_to_save = {
+        "bodyweight": float(current_bodyweight),
+        "height_inches": float(height_inches),
+        "age": int(age),
+        "gender": gender,
+        "activity_level": activity_level,
+        "training_experience": training_experience,
+        "goal": goal,
+        "start_date": str(start_date),
+        "updated_at": "now()"
+    }
+    update_user_settings(settings_to_save)
+    st.success("✅ Settings saved! They will now appear on all devices.")
+    st.rerun()
 
 days_elapsed = max((current_date - start_date).days, 0)
 current_week = min((days_elapsed // 7) + 1, 12)
 stage_key, stage_label = get_stage(current_week)
 program_end = start_date + timedelta(days=83)
 
-latest_logged_weight = get_latest_logged_weight(start_weight, workouts_df, nutrition_df)
+# Use current_bodyweight directly for macros (not logged weight)
 macros = calculate_macros(
-    latest_logged_weight, height_inches, age, gender, activity_level, training_experience, goal
+    current_bodyweight, height_inches, age, gender, activity_level, training_experience, goal
 )
 
 t1, t2, t3 = st.columns(3)
@@ -374,7 +422,7 @@ t2.metric("Current stage", stage_label)
 t3.metric("Program end", str(program_end))
 
 m1, m2, m3, m4, m5 = st.columns(5)
-m1.metric("Current bodyweight", f"{latest_logged_weight:.1f} lbs")
+m1.metric("Current bodyweight", f"{current_bodyweight:.1f} lbs")
 m2.metric("Calories", f"{macros['calories']}")
 m3.metric("Protein", f"{macros['protein']} g")
 m4.metric("Carbs", f"{macros['carbs']} g")
@@ -401,7 +449,7 @@ tab1, tab2 = st.tabs(["Workout Log", "Nutrition Log"])
 
 with tab1:
     workout_date = st.date_input("Workout date", value=current_date, key="workout_date")
-    bodyweight_today = st.number_input("Bodyweight today (lbs)", 100.0, 400.0, float(latest_logged_weight), 0.5, key="bw_today")
+    bodyweight_today = st.number_input("Bodyweight today (lbs)", 100.0, 400.0, float(current_bodyweight), 0.5, key="bw_today")
 
     for idx, item in enumerate(day_plan["primary"]):
         st.markdown(f"### {item['exercise']}")
@@ -446,7 +494,7 @@ with tab2:
         with n1:
             nutrition_date = st.date_input("Nutrition date", value=current_date, key="nutrition_date")
         with n2:
-            nutrition_bw = st.number_input("Bodyweight", 100.0, 400.0, float(latest_logged_weight), 0.5)
+            nutrition_bw = st.number_input("Bodyweight", 100.0, 400.0, float(current_bodyweight), 0.5)
         with n3:
             calories_in = st.number_input("Calories eaten", 0, 10000, macros["calories"])
         with n4:
@@ -478,6 +526,6 @@ with tab2:
 
 st.markdown("---")
 st.write(
-    f"Current plan: {goal} | {stage_label} | bodyweight driving macros: {latest_logged_weight:.1f} lbs | "
+    f"Current plan: {goal} | {stage_label} | bodyweight driving macros: {current_bodyweight:.1f} lbs | "
     f"targets: {macros['calories']} cal, {macros['protein']} g protein, {macros['carbs']} g carbs, {macros['fat']} g fat."
 )
