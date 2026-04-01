@@ -13,28 +13,6 @@ def init_connection() -> Client:
 
 supabase = init_connection()
 
-st.sidebar.markdown("### 🔍 Debug Panel")
-try:
-    # Test read
-    test_read = supabase.table("workouts").select("*").limit(1).execute()
-    st.sidebar.success(f"✅ Read: {len(test_read.data)} rows")
-    
-    # Test what key you're using
-    if "service_role" in st.secrets.get("SUPABASE_KEY", ""):
-        st.sidebar.info("🔑 Using: service_role key")
-    else:
-        st.sidebar.info("🔑 Using: anon/public key")
-        
-except Exception as e:
-    st.sidebar.error(f"❌ DB Error: {e}")
-
-# Load data
-workouts_df = load_workouts()
-nutrition_df = load_nutrition()
-
-# Show row counts
-st.sidebar.metric("Workout Rows", len(workouts_df))
-st.sidebar.metric("Nutrition Rows", len(nutrition_df))
 def load_workouts():
     response = supabase.table("workouts").select("*").order("Date").execute()
     data = response.data if response.data else []
@@ -81,6 +59,33 @@ def insert_nutrition(row):
         print(f"❌ Nutrition insert ERROR: {e}")
         st.error(f"Failed to save nutrition: {e}")
         raise
+        
+st.sidebar.markdown("### 🔍 Debug Panel")
+try:
+    test_read = supabase.table("workouts").select("*").limit(1).execute()
+    st.sidebar.success(f"✅ Read: {len(test_read.data)} rows")
+    
+    if "service_role" in st.secrets.get("SUPABASE_KEY", ""):
+        st.sidebar.info("🔑 Using: service_role key")
+    else:
+        st.sidebar.info("🔑 Using: anon/public key")
+except Exception as e:
+    st.sidebar.error(f"❌ DB Error: {e}")
+
+# Load data
+workouts_df = load_workouts()
+nutrition_df = load_nutrition()
+
+st.sidebar.write(f"Workout rows loaded: {len(workouts_df)}")
+st.sidebar.write(f"Nutrition rows loaded: {len(nutrition_df)}")
+if not nutrition_df.empty:
+    st.sidebar.write("Latest nutrition bodyweight:", nutrition_df.iloc[-1].get("Bodyweight", "N/A"))
+if not workouts_df.empty:
+    st.sidebar.write("Latest workout bodyweight:", workouts_df.iloc[-1].get("Bodyweight", "N/A"))
+st.sidebar.metric("Workout Rows", len(workouts_df))
+st.sidebar.metric("Nutrition Rows", len(nutrition_df))
+
+# (rest of your app code continues...)
 
 def get_stage(week):
     if week <= 4:
