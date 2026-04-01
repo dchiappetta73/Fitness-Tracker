@@ -450,18 +450,10 @@ with tab2:
         "Target Carbs": macros["carbs"],
         "Target Fat": macros["fat"]
     }
-
-    st.warning(f"DEBUG row = {row}")
-
-    try:
-        result = insert_nutrition(row)
-        st.success("Nutrition saved")
-        st.json({"debug_result": str(result)})
-    except Exception as e:
-        st.error(f"DEBUG error = {e}")
-
-    st.stop()
-
+    
+    st.warning(f"DEBUG: Form submitted. Row = {row}")
+    st.stop()  # STOP HERE first to see if we get the row
+    
 st.markdown("---")
 st.write(
     f"Current plan: {goal} | {stage_label} | bodyweight driving macros: {latest_logged_weight:.1f} lbs | "
