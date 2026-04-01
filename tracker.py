@@ -437,22 +437,31 @@ with tab2:
         submitted_nutrition = st.form_submit_button("Save nutrition")
 
         if submitted_nutrition:
-            row = {
-                "Date": nutrition_date,
-                "Week": current_week,
-                "Bodyweight": nutrition_bw,
-                "Calories": calories_in,
-                "Protein": protein_in,
-                "Carbs": carbs_in,
-                "Fat": fat_in,
-                "Target Calories": macros["calories"],
-                "Target Protein": macros["protein"],
-                "Target Carbs": macros["carbs"],
-                "Target Fat": macros["fat"]
-            }
-            insert_nutrition(row)
-            st.success("Nutrition saved")
-            st.rerun()
+    row = {
+        "Date": nutrition_date,
+        "Week": current_week,
+        "Bodyweight": nutrition_bw,
+        "Calories": calories_in,
+        "Protein": protein_in,
+        "Carbs": carbs_in,
+        "Fat": fat_in,
+        "Target Calories": macros["calories"],
+        "Target Protein": macros["protein"],
+        "Target Carbs": macros["carbs"],
+        "Target Fat": macros["fat"]
+    }
+
+    st.write("DEBUG row:", row)
+
+    try:
+        result = insert_nutrition(row)
+        st.write("DEBUG result:", result)
+        st.success("Nutrition saved")
+    except Exception as e:
+        st.error(f"DEBUG error: {e}")
+
+    # comment this out for now
+    # st.rerun()
 
 st.markdown("---")
 st.write(
