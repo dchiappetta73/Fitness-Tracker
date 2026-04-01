@@ -58,6 +58,24 @@ def insert_nutrition(row):
     }
     supabase.table("nutrition").insert(payload).execute()
 
+def load_user_settings():
+    """Load user settings from database"""
+    response = supabase.table("user_settings").select("*").eq("user_id", "default_user").execute()
+    if response.data and len(response.data) > 0:
+        return response.data[0]
+    return None
+
+def update_user_settings(settings):
+    """Save user settings to database"""
+    supabase.table("user_settings").update(settings).eq("user_id", "default_user").execute()
+
+def get_stage(week):
+    if week <= 4:
+        return "Foundation", "🟢 Foundation (Weeks 1-4)"
+    elif week <= 8:
+        return "Build", "🟡 Build (Weeks 5-8)"
+    return "Peak", "🔴 Peak (Weeks 9-12)"
+
 def get_stage(week):
     if week <= 4:
         return "Foundation", "🟢 Foundation (Weeks 1-4)"
