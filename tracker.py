@@ -438,7 +438,7 @@ with tab2:
 
         if submitted_nutrition:
     row = {
-        "Date": nutrition_date,
+        "Date": str(nutrition_date),
         "Week": current_week,
         "Bodyweight": nutrition_bw,
         "Calories": calories_in,
@@ -451,17 +451,16 @@ with tab2:
         "Target Fat": macros["fat"]
     }
 
-    st.write("DEBUG row:", row)
+    st.warning(f"DEBUG row = {row}")
 
     try:
         result = insert_nutrition(row)
-        st.write("DEBUG result:", result)
         st.success("Nutrition saved")
+        st.json({"debug_result": str(result)})
     except Exception as e:
-        st.error(f"DEBUG error: {e}")
+        st.error(f"DEBUG error = {e}")
 
-    # comment this out for now
-    # st.rerun()
+    st.stop()
 
 st.markdown("---")
 st.write(
