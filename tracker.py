@@ -352,11 +352,11 @@ else:
 
 c1, c2, c3, c4 = st.columns(4)
 with c1:
-    current_bodyweight = st.number_input("Current weight (lbs)", 100.0, 400.0, default_weight, 0.5)
+    current_bodyweight = st.number_input("Current weight (lbs)", 100.0, 400.0, float(default_weight), 0.5)
 with c2:
-    height_inches = st.number_input("Height (inches)", 48.0, 84.0, default_height, 0.5)
+    height_inches = st.number_input("Height (inches)", 48.0, 84.0, float(default_height), 0.5)
 with c3:
-    age = st.number_input("Age", 18, 90, default_age, 1)
+    age = st.number_input("Age", 18, 90, int(default_age), 1)
 with c4:
     gender = st.selectbox("Gender", ["Male", "Female"], index=0 if default_gender == "Male" else 1)
 
