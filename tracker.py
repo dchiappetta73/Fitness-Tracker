@@ -6,7 +6,6 @@ from supabase import create_client, Client
 
 st.set_page_config(page_title="4-Day Upper/Lower Recomp Tracker", layout="wide")
 
-@st.cache_resource
 def init_connection() -> Client:
     url = st.secrets["SUPABASE_URL"]
     key = st.secrets["SUPABASE_KEY"]
