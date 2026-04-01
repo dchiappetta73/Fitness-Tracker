@@ -6,6 +6,10 @@ from supabase import create_client, Client
 
 st.set_page_config(page_title="4-Day Upper/Lower Recomp Tracker", layout="wide")
 
+# ---------------------------
+# Supabase connection
+# ---------------------------
+@st.cache_resource
 def init_connection() -> Client:
     url = st.secrets["SUPABASE_URL"]
     key = st.secrets["SUPABASE_KEY"]
@@ -13,6 +17,9 @@ def init_connection() -> Client:
 
 supabase = init_connection()
 
+# ---------------------------
+# Data helpers
+# ---------------------------
 def load_workouts():
     response = supabase.table("workouts").select("*").order("Date").execute()
     data = response.data if response.data else []
@@ -24,69 +31,42 @@ def load_nutrition():
     return pd.DataFrame(data)
 
 def insert_workout(row):
-    try:
-        payload = {
-            "Date": str(row["Date"]),
-            "Week": int(row["Week"]),
-            "Stage": row["Stage"],
-            "Day": row["Day"],
-            "Bodyweight": float(row["Bodyweight"]),
-            "Primary_Exercise": row["Primary Exercise"],
-            "Selected_Exercise": row["Selected Exercise"],
-            "Category": row["Category"],
-            "Sets": float(row["Sets"]),
-            "Reps": float(row["Reps"]),
-            "Load": float(row["Load"]),
-            "RPE": float(row["RPE"]),
-            "Notes": row["Notes"]
-        }
-        result = supabase.table("workouts").insert(payload).execute()
-        print(f"✅ Workout insert successful: {result}")
-        return result
-    except Exception as e:
-        print(f"❌ Workout insert ERROR: {e}")
-        st.error(f"Failed to save workout: {e}")
-        raise
+    payload = {
+        "Date": str(row["Date"]),
+        "Week": int(row["Week"]),
+        "Stage": row["Stage"],
+        "Day": row["Day"],
+        "Bodyweight": float(row["Bodyweight"]),
+        "Primary_Exercise": row["Primary Exercise"],
+        "Selected_Exercise": row["Selected Exercise"],
+        "Category": row["Category"],
+        "Sets": float(row["Sets"]),
+        "Reps": float(row["Reps"]),
+        "Load": float(row["Load"]),
+        "RPE": float(row["RPE"]),
+        "Notes": row["Notes"]
+    }
+    supabase.table("workouts").insert(payload).execute()
 
 def insert_nutrition(row):
-    try:
-        payload = [row]  # Supabase expects a list
-        print(f"📤 Attempting nutrition insert: {payload}")
-        result = supabase.table("nutrition").insert(payload).execute()
-        print(f"✅ Nutrition insert successful: {result}")
-        return result
-    except Exception as e:
-        print(f"❌ Nutrition insert ERROR: {e}")
-        st.error(f"Failed to save nutrition: {e}")
-        raise
-        
-st.sidebar.markdown("### 🔍 Debug Panel")
-try:
-    test_read = supabase.table("workouts").select("*").limit(1).execute()
-    st.sidebar.success(f"✅ Read: {len(test_read.data)} rows")
-    
-    if "service_role" in st.secrets.get("SUPABASE_KEY", ""):
-        st.sidebar.info("🔑 Using: service_role key")
-    else:
-        st.sidebar.info("🔑 Using: anon/public key")
-except Exception as e:
-    st.sidebar.error(f"❌ DB Error: {e}")
+    payload = {
+        "Date": str(row["Date"]),
+        "Week": int(row["Week"]),
+        "Bodyweight": float(row["Bodyweight"]),
+        "Calories": float(row["Calories"]),
+        "Protein": float(row["Protein"]),
+        "Carbs": float(row["Carbs"]),
+        "Fat": float(row["Fat"]),
+        "Target_Calories": float(row["Target Calories"]),
+        "Target_Protein": float(row["Target Protein"]),
+        "Target_Carbs": float(row["Target Carbs"]),
+        "Target_Fat": float(row["Target Fat"])
+    }
+    supabase.table("nutrition").insert(payload).execute()
 
-# Load data
-workouts_df = load_workouts()
-nutrition_df = load_nutrition()
-
-st.sidebar.write(f"Workout rows loaded: {len(workouts_df)}")
-st.sidebar.write(f"Nutrition rows loaded: {len(nutrition_df)}")
-if not nutrition_df.empty:
-    st.sidebar.write("Latest nutrition bodyweight:", nutrition_df.iloc[-1].get("Bodyweight", "N/A"))
-if not workouts_df.empty:
-    st.sidebar.write("Latest workout bodyweight:", workouts_df.iloc[-1].get("Bodyweight", "N/A"))
-st.sidebar.metric("Workout Rows", len(workouts_df))
-st.sidebar.metric("Nutrition Rows", len(nutrition_df))
-
-# (rest of your app code continues...)
-
+# ---------------------------
+# Helpers
+# ---------------------------
 def get_stage(week):
     if week <= 4:
         return "Foundation", "🟢 Foundation (Weeks 1-4)"
@@ -322,12 +302,280 @@ def build_program():
                     {"exercise": "Bird Dog", "category": "Core", "sets": 3, "reps": 12, "subs": ["Dead Bug", "Pallof Press"]}
                 ]
             }
+        },
+        "Recovery": {
+            "Foundation": {
+                "warmup": [
+                    "5 min easy walk",
+                    "Foam roll T-spine x 45 sec",
+                    "Open book x 8/side",
+                    "Cat-cow x 8",
+                    "Hip flexor stretch x 30 sec/side",
+                    "Band pull-aparts x 15",
+                    "Dead bug x 8/side"
+                ],
+                "primary": [
+                    {"exercise": "Walk", "category": "Recovery", "sets": 1, "reps": 20, "subs": ["Bike", "Elliptical"]},
+                    {"exercise": "Stretch", "category": "Mobility", "sets": 1, "reps": 10, "subs": ["Mobility Flow", "Yoga"]}
+                ]
+            },
+            "Build": {
+                "warmup": [
+                    "5 min easy walk",
+                    "Foam roll T-spine x 45 sec",
+                    "Open book x 8/side",
+                    "Cat-cow x 8",
+                    "Hip flexor stretch x 30 sec/side",
+                    "Band pull-aparts x 15",
+                    "Dead bug x 8/side"
+                ],
+                "primary": [
+                    {"exercise": "Walk", "category": "Recovery", "sets": 1, "reps": 25, "subs": ["Bike", "Elliptical"]},
+                    {"exercise": "Stretch", "category": "Mobility", "sets": 1, "reps": 12, "subs": ["Mobility Flow", "Yoga"]}
+                ]
+            },
+            "Peak": {
+                "warmup": [
+                    "5 min easy walk",
+                    "Foam roll T-spine x 45 sec",
+                    "Open book x 8/side",
+                    "Cat-cow x 8",
+                    "Hip flexor stretch x 30 sec/side",
+                    "Band pull-aparts x 15",
+                    "Dead bug x 8/side"
+                ],
+                "primary": [
+                    {"exercise": "Walk", "category": "Recovery", "sets": 1, "reps": 30, "subs": ["Bike", "Elliptical"]},
+                    {"exercise": "Stretch", "category": "Mobility", "sets": 1, "reps": 15, "subs": ["Mobility Flow", "Yoga"]}
+                ]
+            }
+        },
+        "Upper 2": {
+            "Foundation": {
+                "warmup": [
+                    "5 min bike or elliptical",
+                    "Foam roll T-spine x 45-60 sec",
+                    "Reach-back thoracic rotation x 8/side",
+                    "Wall slides x 10",
+                    "Band external rotation x 12/side",
+                    "Face pull x 12",
+                    "Serratus wall slide or scap push-up x 8",
+                    "Pallof press x 10/side",
+                    "2-3 ramp-up sets for first press and first pull"
+                ],
+                "primary": [
+                    {"exercise": "Incline Machine Press", "category": "Chest", "sets": 3, "reps": 10, "subs": ["Cable Press", "DB Floor Press"]},
+                    {"exercise": "Chest-Supported Row", "category": "Back", "sets": 3, "reps": 10, "subs": ["Seated Row", "Cable Row"]},
+                    {"exercise": "High Row", "category": "Back", "sets": 3, "reps": 10, "subs": ["Lat Pulldown", "Machine Row"]},
+                    {"exercise": "Lateral Raise", "category": "Delts", "sets": 3, "reps": 12, "subs": ["Cable Lateral Raise", "Machine Lateral Raise"]},
+                    {"exercise": "Rear Delt Fly", "category": "Rear Delts", "sets": 2, "reps": 15, "subs": ["Face Pull", "Band Pull-Apart"]},
+                    {"exercise": "Hammer Curl", "category": "Biceps", "sets": 2, "reps": 12, "subs": ["DB Curl", "Cable Curl"]},
+                    {"exercise": "Overhead Rope Extension", "category": "Triceps", "sets": 2, "reps": 12, "subs": ["Cable Pressdown", "Single-Arm Extension"]}
+                ]
+            },
+            "Build": {
+                "warmup": [
+                    "5 min bike or elliptical",
+                    "Foam roll T-spine x 45-60 sec",
+                    "Reach-back thoracic rotation x 10/side",
+                    "Wall slides x 10",
+                    "Band external rotation x 15/side",
+                    "Face pull x 15",
+                    "Serratus wall slide or scap push-up x 10",
+                    "Pallof press x 10/side",
+                    "2-3 ramp-up sets for first press and first pull"
+                ],
+                "primary": [
+                    {"exercise": "Incline Machine Press", "category": "Chest", "sets": 4, "reps": 8, "subs": ["Cable Press", "DB Floor Press"]},
+                    {"exercise": "Chest-Supported Row", "category": "Back", "sets": 4, "reps": 8, "subs": ["Seated Row", "Cable Row"]},
+                    {"exercise": "High Row", "category": "Back", "sets": 4, "reps": 8, "subs": ["Lat Pulldown", "Machine Row"]},
+                    {"exercise": "Lateral Raise", "category": "Delts", "sets": 3, "reps": 12, "subs": ["Cable Lateral Raise", "Machine Lateral Raise"]},
+                    {"exercise": "Rear Delt Fly", "category": "Rear Delts", "sets": 3, "reps": 12, "subs": ["Face Pull", "Band Pull-Apart"]},
+                    {"exercise": "Hammer Curl", "category": "Biceps", "sets": 3, "reps": 10, "subs": ["DB Curl", "Cable Curl"]},
+                    {"exercise": "Overhead Rope Extension", "category": "Triceps", "sets": 3, "reps": 10, "subs": ["Cable Pressdown", "Single-Arm Extension"]}
+                ]
+            },
+            "Peak": {
+                "warmup": [
+                    "5 min bike or elliptical",
+                    "Foam roll T-spine x 60 sec",
+                    "Reach-back thoracic rotation x 10/side",
+                    "Wall slides x 12",
+                    "Band external rotation x 15/side",
+                    "Face pull x 15",
+                    "Serratus wall slide or scap push-up x 10",
+                    "Pallof press x 12/side",
+                    "2-4 ramp-up sets for first press and first pull"
+                ],
+                "primary": [
+                    {"exercise": "Incline Machine Press", "category": "Chest", "sets": 4, "reps": 6, "subs": ["Cable Press", "DB Floor Press"]},
+                    {"exercise": "Chest-Supported Row", "category": "Back", "sets": 4, "reps": 6, "subs": ["Seated Row", "Cable Row"]},
+                    {"exercise": "High Row", "category": "Back", "sets": 4, "reps": 8, "subs": ["Lat Pulldown", "Machine Row"]},
+                    {"exercise": "Lateral Raise", "category": "Delts", "sets": 4, "reps": 12, "subs": ["Cable Lateral Raise", "Machine Lateral Raise"]},
+                    {"exercise": "Rear Delt Fly", "category": "Rear Delts", "sets": 3, "reps": 12, "subs": ["Face Pull", "Band Pull-Apart"]},
+                    {"exercise": "Hammer Curl", "category": "Biceps", "sets": 3, "reps": 10, "subs": ["DB Curl", "Cable Curl"]},
+                    {"exercise": "Overhead Rope Extension", "category": "Triceps", "sets": 3, "reps": 10, "subs": ["Cable Pressdown", "Single-Arm Extension"]}
+                ]
+            }
+        },
+        "Lower 2": {
+            "Foundation": {
+                "warmup": [
+                    "5 min bike",
+                    "Cat-cow x 8",
+                    "Quadruped rock-back x 10",
+                    "Glute bridge x 12",
+                    "Bird dog x 8/side",
+                    "90/90 hip switches x 8/side",
+                    "Ankle rocks x 10/side",
+                    "Goblet squat x 8",
+                    "2-4 ramp-up sets for first lower-body movement"
+                ],
+                "primary": [
+                    {"exercise": "Hack Squat Machine", "category": "Quads", "sets": 3, "reps": 10, "subs": ["Leg Press", "Goblet Squat"]},
+                    {"exercise": "Romanian Deadlift (light)", "category": "Hamstrings", "sets": 3, "reps": 10, "subs": ["Glute Bridge", "Hamstring Curl"]},
+                    {"exercise": "Step-up", "category": "Quads", "sets": 3, "reps": 10, "subs": ["Split Squat", "Reverse Lunge"]},
+                    {"exercise": "Seated Calf Raise", "category": "Calves", "sets": 3, "reps": 15, "subs": ["Standing Calf Raise", "Single-Leg Calf Raise"]},
+                    {"exercise": "Pallof Press", "category": "Core", "sets": 2, "reps": 12, "subs": ["Dead Bug", "Bird Dog"]}
+                ]
+            },
+            "Build": {
+                "warmup": [
+                    "5 min bike",
+                    "Cat-cow x 8",
+                    "Quadruped rock-back x 10",
+                    "Glute bridge x 12",
+                    "Bird dog x 10/side",
+                    "90/90 hip switches x 10/side",
+                    "Ankle rocks x 10/side",
+                    "Goblet squat x 8",
+                    "2-4 ramp-up sets for first lower-body movement"
+                ],
+                "primary": [
+                    {"exercise": "Hack Squat Machine", "category": "Quads", "sets": 4, "reps": 8, "subs": ["Leg Press", "Goblet Squat"]},
+                    {"exercise": "Romanian Deadlift (light)", "category": "Hamstrings", "sets": 4, "reps": 8, "subs": ["Glute Bridge", "Hamstring Curl"]},
+                    {"exercise": "Step-up", "category": "Quads", "sets": 3, "reps": 10, "subs": ["Split Squat", "Reverse Lunge"]},
+                    {"exercise": "Seated Calf Raise", "category": "Calves", "sets": 4, "reps": 12, "subs": ["Standing Calf Raise", "Single-Leg Calf Raise"]},
+                    {"exercise": "Pallof Press", "category": "Core", "sets": 3, "reps": 12, "subs": ["Dead Bug", "Bird Dog"]}
+                ]
+            },
+            "Peak": {
+                "warmup": [
+                    "5 min bike",
+                    "Cat-cow x 8",
+                    "Quadruped rock-back x 10",
+                    "Glute bridge x 12",
+                    "Bird dog x 10/side",
+                    "90/90 hip switches x 10/side",
+                    "Ankle rocks x 12/side",
+                    "Goblet squat x 8",
+                    "2-4 ramp-up sets for first lower-body movement"
+                ],
+                "primary": [
+                    {"exercise": "Hack Squat Machine", "category": "Quads", "sets": 4, "reps": 6, "subs": ["Leg Press", "Goblet Squat"]},
+                    {"exercise": "Romanian Deadlift (light)", "category": "Hamstrings", "sets": 4, "reps": 8, "subs": ["Glute Bridge", "Hamstring Curl"]},
+                    {"exercise": "Step-up", "category": "Quads", "sets": 4, "reps": 8, "subs": ["Split Squat", "Reverse Lunge"]},
+                    {"exercise": "Seated Calf Raise", "category": "Calves", "sets": 4, "reps": 15, "subs": ["Standing Calf Raise", "Single-Leg Calf Raise"]},
+                    {"exercise": "Pallof Press", "category": "Core", "sets": 3, "reps": 12, "subs": ["Dead Bug", "Bird Dog"]}
+                ]
+            }
+        },
+        "Cardio/Mobility": {
+            "Foundation": {
+                "warmup": [
+                    "5 min brisk walk",
+                    "Foam roll T-spine x 45 sec",
+                    "Open book x 8/side",
+                    "Thread the needle x 8/side",
+                    "Shoulder circles x 15 each way",
+                    "Hip opener x 8/side",
+                    "Dead bug x 8/side"
+                ],
+                "primary": [
+                    {"exercise": "Elliptical", "category": "Conditioning", "sets": 1, "reps": 20, "subs": ["Bike", "Incline Walk"]},
+                    {"exercise": "Thoracic Rotation", "category": "Mobility", "sets": 3, "reps": 10, "subs": ["Open Book", "Thread the Needle"]}
+                ]
+            },
+            "Build": {
+                "warmup": [
+                    "5 min brisk walk",
+                    "Foam roll T-spine x 45 sec",
+                    "Open book x 8/side",
+                    "Thread the needle x 8/side",
+                    "Shoulder circles x 15 each way",
+                    "Hip opener x 8/side",
+                    "Dead bug x 8/side"
+                ],
+                "primary": [
+                    {"exercise": "Elliptical", "category": "Conditioning", "sets": 1, "reps": 25, "subs": ["Bike", "Incline Walk"]},
+                    {"exercise": "Thoracic Rotation", "category": "Mobility", "sets": 3, "reps": 12, "subs": ["Open Book", "Thread the Needle"]}
+                ]
+            },
+            "Peak": {
+                "warmup": [
+                    "5 min brisk walk",
+                    "Foam roll T-spine x 45 sec",
+                    "Open book x 8/side",
+                    "Thread the needle x 8/side",
+                    "Shoulder circles x 15 each way",
+                    "Hip opener x 8/side",
+                    "Dead bug x 8/side"
+                ],
+                "primary": [
+                    {"exercise": "Elliptical", "category": "Conditioning", "sets": 1, "reps": 30, "subs": ["Bike", "Incline Walk"]},
+                    {"exercise": "Thoracic Rotation", "category": "Mobility", "sets": 4, "reps": 10, "subs": ["Open Book", "Thread the Needle"]}
+                ]
+            }
+        },
+        "Rest": {
+            "Foundation": {
+                "warmup": [
+                    "Optional 10-20 min walk",
+                    "Open book x 6/side",
+                    "Cat-cow x 6",
+                    "Band pull-aparts x 12",
+                    "Hip flexor stretch x 20-30 sec/side"
+                ],
+                "primary": [
+                    {"exercise": "Rest", "category": "Recovery", "sets": 1, "reps": 1, "subs": ["Easy Walk", "Stretching"]}
+                ]
+            },
+            "Build": {
+                "warmup": [
+                    "Optional 10-20 min walk",
+                    "Open book x 6/side",
+                    "Cat-cow x 6",
+                    "Band pull-aparts x 12",
+                    "Hip flexor stretch x 20-30 sec/side"
+                ],
+                "primary": [
+                    {"exercise": "Rest", "category": "Recovery", "sets": 1, "reps": 1, "subs": ["Easy Walk", "Stretching"]}
+                ]
+            },
+            "Peak": {
+                "warmup": [
+                    "Optional 10-20 min walk",
+                    "Open book x 6/side",
+                    "Cat-cow x 6",
+                    "Band pull-aparts x 12",
+                    "Hip flexor stretch x 20-30 sec/side"
+                ],
+                "primary": [
+                    {"exercise": "Rest", "category": "Recovery", "sets": 1, "reps": 1, "subs": ["Easy Walk", "Stretching"]}
+                ]
+            }
         }
     }
 
+# ---------------------------
+# Load data
+# ---------------------------
 workouts_df = load_workouts()
 nutrition_df = load_nutrition()
 
+# ---------------------------
+# UI
+# ---------------------------
 st.title("4-Day Upper/Lower Recomp Tracker")
 
 st.header("Program Setup")
@@ -392,7 +640,8 @@ m4.metric("Carbs", f"{macros['carbs']} g")
 m5.metric("Fat", f"{macros['fat']} g")
 
 program = build_program()
-selected_day = st.selectbox("Training day", list(program.keys()))
+day_options = list(program.keys())
+selected_day = st.selectbox("Training day", day_options)
 day_plan = program[selected_day][stage_key]
 
 st.header("Daily plan")
@@ -400,6 +649,7 @@ left, right = st.columns(2)
 
 with left:
     st.subheader("Warmup")
+    st.caption("Warmup order: 1) heat, 2) mobility, 3) activation, 4) ramp-up sets")
     for item in day_plan["warmup"]:
         st.write(f"- {item}")
 
@@ -408,17 +658,23 @@ with right:
     for item in day_plan["primary"]:
         st.write(f"- {item['exercise']} — {item['sets']}x{item['reps']} ({item['category']})")
 
-tab1, tab2 = st.tabs(["Workout Log", "Nutrition Log"])
+st.subheader("Possible substitutions")
+for item in day_plan["primary"]:
+    st.write(f"**{item['exercise']}** → {', '.join(item['subs'])}")
+
+tab1, tab2, tab3, tab4 = st.tabs(["Workout Log", "Nutrition Log", "Dashboard", "Volume Analysis"])
 
 with tab1:
+    st.subheader("Log today's exercises")
     workout_date = st.date_input("Workout date", value=current_date, key="workout_date")
     bodyweight_today = st.number_input("Bodyweight today (lbs)", 100.0, 400.0, float(latest_logged_weight), 0.5, key="bw_today")
-    
+
     for idx, item in enumerate(day_plan["primary"]):
         st.markdown(f"### {item['exercise']}")
+        st.caption(f"Suggested substitutions: {', '.join(item['subs'])}")
         options = [item["exercise"]] + item["subs"]
         selected_exercise = st.selectbox(f"Movement choice {idx + 1}", options, key=f"select_{idx}_{selected_day}")
-        
+
         c1, c2, c3, c4 = st.columns(4)
         with c1:
             sets = st.number_input(f"Sets {idx + 1}", 1, 10, item["sets"], key=f"sets_{idx}_{selected_day}")
@@ -428,9 +684,8 @@ with tab1:
             load = st.number_input(f"Load {idx + 1}", 0.0, 1000.0, 0.0, 5.0, key=f"load_{idx}_{selected_day}")
         with c4:
             rpe = st.number_input(f"RPE {idx + 1}", 1.0, 10.0, 7.0, 0.5, key=f"rpe_{idx}_{selected_day}")
-        
         notes = st.text_input(f"Notes {idx + 1}", key=f"notes_{idx}_{selected_day}")
-        
+
         if st.button(f"Save {selected_exercise}", key=f"save_{idx}_{selected_day}"):
             row = {
                 "Date": workout_date,
@@ -449,44 +704,202 @@ with tab1:
             }
             insert_workout(row)
             st.success(f"Saved {selected_exercise}")
-            st.cache_data.clear()
             st.rerun()
 
+    with st.form("custom_exercise_form"):
+        st.markdown("### Add custom exercise")
+        extra_name = st.text_input("Custom exercise name")
+        category = st.selectbox("Body-part category", ["Chest", "Back", "Delts", "Rear Delts", "Biceps", "Triceps", "Quads", "Hamstrings", "Calves", "Core", "Mobility", "Conditioning", "Recovery", "Custom"])
+        e1, e2, e3, e4 = st.columns(4)
+        with e1:
+            extra_sets = st.number_input("Custom sets", 1, 10, 3)
+        with e2:
+            extra_reps = st.number_input("Custom reps", 1, 50, 10)
+        with e3:
+            extra_load = st.number_input("Custom load", 0.0, 1000.0, 0.0, 5.0)
+        with e4:
+            extra_rpe = st.number_input("Custom RPE", 1.0, 10.0, 7.0, 0.5)
+        extra_notes = st.text_input("Custom notes")
+        submit_extra = st.form_submit_button("Save custom exercise")
+
+        if submit_extra and extra_name:
+            row = {
+                "Date": workout_date,
+                "Week": current_week,
+                "Stage": stage_key,
+                "Day": selected_day,
+                "Bodyweight": bodyweight_today,
+                "Primary Exercise": "Custom",
+                "Selected Exercise": extra_name,
+                "Category": category,
+                "Sets": extra_sets,
+                "Reps": extra_reps,
+                "Load": extra_load,
+                "RPE": extra_rpe,
+                "Notes": extra_notes
+            }
+            insert_workout(row)
+            st.success(f"Saved custom exercise: {extra_name}")
+            st.rerun()
+
+    workouts_df = load_workouts()
+    st.dataframe(workouts_df, use_container_width=True)
+
 with tab2:
-    st.subheader("Nutrition")
-    n1, n2, n3, n4, n5, n6 = st.columns(6)
-    with n1:
-        nutrition_date = st.date_input("Nutrition date", value=current_date)
-    with n2:
-        nutrition_bw = st.number_input("Bodyweight", 100.0, 400.0, float(latest_logged_weight), 0.5)
-    with n3:
-        calories_in = st.number_input("Calories eaten", 0, 10000, macros["calories"])
-    with n4:
-        protein_in = st.number_input("Protein eaten", 0, 500, macros["protein"])
-    with n5:
-        carbs_in = st.number_input("Carbs eaten", 0, 1000, macros["carbs"])
-    with n6:
-        fat_in = st.number_input("Fat eaten", 0, 300, macros["fat"])
-    
-    if st.button("Save nutrition"):
-        row = {
-            "Date": str(nutrition_date),
-            "Week": current_week,
-            "Bodyweight": nutrition_bw,
-            "Calories": calories_in,
-            "Protein": protein_in,
-            "Carbs": carbs_in,
-            "Fat": fat_in,
-            "Target Calories": macros["calories"],
-            "Target Protein": macros["protein"],
-            "Target Carbs": macros["carbs"],
-            "Target Fat": macros["fat"]
-        }
-        st.warning(f"DEBUG row = {row}")
-        insert_nutrition(row)
-        st.success("Nutrition saved")
-        st.cache_data.clear()
-        st.rerun()
+    st.subheader("Log nutrition")
+    with st.form("nutrition_form"):
+        n1, n2, n3, n4, n5, n6 = st.columns(6)
+        with n1:
+            nutrition_date = st.date_input("Nutrition date", value=current_date, key="nutrition_date")
+        with n2:
+            nutrition_bw = st.number_input("Bodyweight", 100.0, 400.0, float(latest_logged_weight), 0.5)
+        with n3:
+            calories_in = st.number_input("Calories eaten", 0, 10000, macros["calories"])
+        with n4:
+            protein_in = st.number_input("Protein eaten", 0, 500, macros["protein"])
+        with n5:
+            carbs_in = st.number_input("Carbs eaten", 0, 1000, macros["carbs"])
+        with n6:
+            fat_in = st.number_input("Fat eaten", 0, 300, macros["fat"])
+        submitted_nutrition = st.form_submit_button("Save nutrition")
+
+        if submitted_nutrition:
+            row = {
+                "Date": nutrition_date,
+                "Week": current_week,
+                "Bodyweight": nutrition_bw,
+                "Calories": calories_in,
+                "Protein": protein_in,
+                "Carbs": carbs_in,
+                "Fat": fat_in,
+                "Target Calories": macros["calories"],
+                "Target Protein": macros["protein"],
+                "Target Carbs": macros["carbs"],
+                "Target Fat": macros["fat"]
+            }
+            insert_nutrition(row)
+            st.success("Nutrition saved")
+            st.rerun()
+
+    nutrition_df = load_nutrition()
+    st.dataframe(nutrition_df, use_container_width=True)
+
+with tab3:
+    st.subheader("Progress dashboard")
+
+    if not workouts_df.empty:
+        chart_df = workouts_df.copy()
+        if "Date" in chart_df.columns:
+            chart_df["Date"] = pd.to_datetime(chart_df["Date"], errors="coerce")
+        if "Sets" in chart_df.columns:
+            chart_df["Sets"] = pd.to_numeric(chart_df["Sets"], errors="coerce")
+        if "Reps" in chart_df.columns:
+            chart_df["Reps"] = pd.to_numeric(chart_df["Reps"], errors="coerce")
+        if "Load" in chart_df.columns:
+            chart_df["Load"] = pd.to_numeric(chart_df["Load"], errors="coerce")
+        if "RPE" in chart_df.columns:
+            chart_df["RPE"] = pd.to_numeric(chart_df["RPE"], errors="coerce")
+        chart_df = chart_df.dropna(subset=["Date", "Reps", "Load", "RPE"])
+
+        if not chart_df.empty:
+            fig_workouts = px.scatter(
+                chart_df,
+                x="Reps",
+                y="Load",
+                color="Selected_Exercise",
+                size="RPE",
+                hover_data=["Date", "Sets", "Day", "Category"],
+                title="Workout progression"
+            )
+            st.plotly_chart(fig_workouts, use_container_width=True)
+
+            vol_df = chart_df.copy()
+            vol_df["Volume"] = vol_df["Sets"] * vol_df["Reps"] * vol_df["Load"]
+            fig_volume = px.bar(
+                vol_df.groupby("Selected_Exercise", as_index=False)["Volume"].sum(),
+                x="Selected_Exercise",
+                y="Volume",
+                title="Total training volume by exercise"
+            )
+            st.plotly_chart(fig_volume, use_container_width=True)
+
+    if not nutrition_df.empty:
+        nut_df = nutrition_df.copy()
+        if "Date" in nut_df.columns:
+            nut_df["Date"] = pd.to_datetime(nut_df["Date"], errors="coerce")
+        if "Calories" in nut_df.columns:
+            nut_df["Calories"] = pd.to_numeric(nut_df["Calories"], errors="coerce")
+        if "Protein" in nut_df.columns:
+            nut_df["Protein"] = pd.to_numeric(nut_df["Protein"], errors="coerce")
+        if "Bodyweight" in nut_df.columns:
+            nut_df["Bodyweight"] = pd.to_numeric(nut_df["Bodyweight"], errors="coerce")
+        nut_df = nut_df.dropna(subset=["Date"])
+
+        d1, d2 = st.columns(2)
+        d1.metric("Average calories logged", f"{nut_df['Calories'].mean():.0f}")
+        d2.metric("Average protein logged", f"{nut_df['Protein'].mean():.0f} g")
+
+        fig_nutrition = px.line(
+            nut_df,
+            x="Date",
+            y=["Calories", "Protein", "Bodyweight"],
+            title="Nutrition and bodyweight trend"
+        )
+        st.plotly_chart(fig_nutrition, use_container_width=True)
+
+with tab4:
+    st.subheader("Weekly set volume analysis")
+    targets = calculate_weekly_set_targets(goal, training_experience)
+
+    if workouts_df.empty:
+        st.info("Log workouts to see weekly set analysis.")
+    else:
+        analysis_df = workouts_df.copy()
+        if "Week" in analysis_df.columns:
+            analysis_df["Week"] = pd.to_numeric(analysis_df["Week"], errors="coerce")
+        if "Sets" in analysis_df.columns:
+            analysis_df["Sets"] = pd.to_numeric(analysis_df["Sets"], errors="coerce")
+        analysis_df = analysis_df.dropna(subset=["Week", "Sets", "Category"])
+
+        week_values = sorted(analysis_df["Week"].dropna().astype(int).unique().tolist())
+        if week_values:
+            week_filter = st.selectbox("Analyze week", week_values, index=0)
+            week_df = analysis_df[analysis_df["Week"] == week_filter]
+            by_category = week_df.groupby("Category", as_index=False)["Sets"].sum()
+
+            rows = []
+            for category, target_range in targets.items():
+                actual_sets = 0
+                match = by_category[by_category["Category"] == category]
+                if not match.empty:
+                    actual_sets = float(match.iloc[0]["Sets"])
+
+                low_target, high_target = target_range
+                if actual_sets < low_target:
+                    status = "Under target"
+                elif actual_sets > high_target:
+                    status = "Above target"
+                else:
+                    status = "On target"
+
+                rows.append({
+                    "Category": category,
+                    "Actual Sets": actual_sets,
+                    "Target Range": f"{low_target}-{high_target}",
+                    "Status": status
+                })
+
+            result_df = pd.DataFrame(rows)
+            st.dataframe(result_df, use_container_width=True)
+
+            fig_sets = px.bar(
+                result_df,
+                x="Category",
+                y="Actual Sets",
+                color="Status",
+                title=f"Weekly set totals - Week {week_filter}"
+            )
+            st.plotly_chart(fig_sets, use_container_width=True)
 
 st.markdown("---")
 st.write(
