@@ -43,20 +43,16 @@ def insert_workout(row):
     supabase.table("workouts").insert(payload).execute()
 
 def insert_nutrition(row):
-    payload = {
-        "Date": str(row["Date"]),
-        "Week": int(row["Week"]),
-        "Bodyweight": float(row["Bodyweight"]),
-        "Calories": float(row["Calories"]),
-        "Protein": float(row["Protein"]),
-        "Carbs": float(row["Carbs"]),
-        "Fat": float(row["Fat"]),
-        "Target_Calories": float(row["Target Calories"]),
-        "Target_Protein": float(row["Target Protein"]),
-        "Target_Carbs": float(row["Target Carbs"]),
-        "Target_Fat": float(row["Target Fat"])
-    }
-    supabase.table("nutrition").insert(payload).execute()
+    print(f"INSERT_NUTRITION CALLED with row: {row}")
+    try:
+        payload = [row]
+        print(f"Payload: {payload}")
+        result = supabase.table("nutrition").insert(payload).execute()
+        print(f"Supabase result: {result}")
+        return result
+    except Exception as e:
+        print(f"INSERT_NUTRITION ERROR: {e}")
+        raise
 
 def get_stage(week):
     if week <= 4:
