@@ -67,7 +67,13 @@ def load_user_settings():
 
 def update_user_settings(settings):
     """Save user settings to database"""
-    supabase.table("user_settings").update(settings).eq("user_id", "default_user").execute()
+    try:
+        result = supabase.table("user_settings").update(settings).eq("user_id", "default_user").execute()
+        st.write("DEBUG - Update result:", result)
+        return result
+    except Exception as e:
+        st.error(f"Update failed: {e}")
+        return None
 
 def get_stage(week):
     if week <= 4:
