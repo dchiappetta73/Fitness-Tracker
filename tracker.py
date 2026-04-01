@@ -25,33 +25,40 @@ def load_nutrition():
     return pd.DataFrame(data)
 
 def insert_workout(row):
-    payload = {
-        "Date": str(row["Date"]),
-        "Week": int(row["Week"]),
-        "Stage": row["Stage"],
-        "Day": row["Day"],
-        "Bodyweight": float(row["Bodyweight"]),
-        "Primary_Exercise": row["Primary Exercise"],
-        "Selected_Exercise": row["Selected Exercise"],
-        "Category": row["Category"],
-        "Sets": float(row["Sets"]),
-        "Reps": float(row["Reps"]),
-        "Load": float(row["Load"]),
-        "RPE": float(row["RPE"]),
-        "Notes": row["Notes"]
-    }
-    supabase.table("workouts").insert(payload).execute()
-
-def insert_nutrition(row):
-    print(f"INSERT_NUTRITION CALLED with row: {row}")
     try:
-        payload = [row]
-        print(f"Payload: {payload}")
-        result = supabase.table("nutrition").insert(payload).execute()
-        print(f"Supabase result: {result}")
+        payload = {
+            "Date": str(row["Date"]),
+            "Week": int(row["Week"]),
+            "Stage": row["Stage"],
+            "Day": row["Day"],
+            "Bodyweight": float(row["Bodyweight"]),
+            "Primary_Exercise": row["Primary Exercise"],
+            "Selected_Exercise": row["Selected Exercise"],
+            "Category": row["Category"],
+            "Sets": float(row["Sets"]),
+            "Reps": float(row["Reps"]),
+            "Load": float(row["Load"]),
+            "RPE": float(row["RPE"]),
+            "Notes": row["Notes"]
+        }
+        result = supabase.table("workouts").insert(payload).execute()
+        print(f"✅ Workout insert successful: {result}")
         return result
     except Exception as e:
-        print(f"INSERT_NUTRITION ERROR: {e}")
+        print(f"❌ Workout insert ERROR: {e}")
+        st.error(f"Failed to save workout: {e}")
+        raise
+
+def insert_nutrition(row):
+    try:
+        payload = [row]  # Supabase expects a list
+        print(f"📤 Attempting nutrition insert: {payload}")
+        result = supabase.table("nutrition").insert(payload).execute()
+        print(f"✅ Nutrition insert successful: {result}")
+        return result
+    except Exception as e:
+        print(f"❌ Nutrition insert ERROR: {e}")
+        st.error(f"Failed to save nutrition: {e}")
         raise
 
 def get_stage(week):
