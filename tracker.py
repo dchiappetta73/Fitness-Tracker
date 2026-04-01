@@ -409,12 +409,12 @@ tab1, tab2 = st.tabs(["Workout Log", "Nutrition Log"])
 with tab1:
     workout_date = st.date_input("Workout date", value=current_date, key="workout_date")
     bodyweight_today = st.number_input("Bodyweight today (lbs)", 100.0, 400.0, float(latest_logged_weight), 0.5, key="bw_today")
-
+    
     for idx, item in enumerate(day_plan["primary"]):
         st.markdown(f"### {item['exercise']}")
         options = [item["exercise"]] + item["subs"]
         selected_exercise = st.selectbox(f"Movement choice {idx + 1}", options, key=f"select_{idx}_{selected_day}")
-
+        
         c1, c2, c3, c4 = st.columns(4)
         with c1:
             sets = st.number_input(f"Sets {idx + 1}", 1, 10, item["sets"], key=f"sets_{idx}_{selected_day}")
@@ -424,9 +424,9 @@ with tab1:
             load = st.number_input(f"Load {idx + 1}", 0.0, 1000.0, 0.0, 5.0, key=f"load_{idx}_{selected_day}")
         with c4:
             rpe = st.number_input(f"RPE {idx + 1}", 1.0, 10.0, 7.0, 0.5, key=f"rpe_{idx}_{selected_day}")
-
+        
         notes = st.text_input(f"Notes {idx + 1}", key=f"notes_{idx}_{selected_day}")
-
+        
         if st.button(f"Save {selected_exercise}", key=f"save_{idx}_{selected_day}"):
             row = {
                 "Date": workout_date,
@@ -445,6 +445,7 @@ with tab1:
             }
             insert_workout(row)
             st.success(f"Saved {selected_exercise}")
+            st.cache_data.clear()
             st.rerun()
 
 with tab2:
@@ -462,7 +463,7 @@ with tab2:
         carbs_in = st.number_input("Carbs eaten", 0, 1000, macros["carbs"])
     with n6:
         fat_in = st.number_input("Fat eaten", 0, 300, macros["fat"])
-
+    
     if st.button("Save nutrition"):
         row = {
             "Date": str(nutrition_date),
@@ -477,11 +478,11 @@ with tab2:
             "Target Carbs": macros["carbs"],
             "Target Fat": macros["fat"]
         }
-        st.warning(f"DEBUG row = {row}")  # temporary
+        st.warning(f"DEBUG row = {row}")
         insert_nutrition(row)
         st.success("Nutrition saved")
+        st.cache_data.clear()
         st.rerun()
-    
 
 st.markdown("---")
 st.write(
